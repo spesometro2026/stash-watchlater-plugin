@@ -82,8 +82,12 @@
       e.preventDefault();
       e.stopPropagation();
       if (busy) return;
-      setBusy(true);
+      const prevOn = on;
       const nextOn = !on;
+      // Optimistic: flip the color immediately, don't make the click feel dead while the
+      // GraphQL round-trip is in flight. Roll back on failure.
+      setOn(nextOn);
+      setBusy(true);
       try {
         const tid = await ensureTag();
         const currentIds = (scene.tags || []).map((t) => t.id);
@@ -94,12 +98,9 @@
           "mutation($input: SceneUpdateInput!) { sceneUpdate(input: $input) { id tags { id } } }",
           { input: { id: scene.id, tag_ids: newIds } }
         );
-        // Do NOT mutate scene.tags: the object comes from the Apollo cache and is frozen (seen
-        // in the console: "Cannot assign to read only property") - setOn alone is enough, "on"
-        // is already independent React state, scene itself doesn't need to stay in sync.
-        setOn(nextOn);
       } catch (err) {
         console.error("[Watch Later] toggle error:", err);
+        setOn(prevOn);
       } finally {
         setBusy(false);
       }
@@ -230,6 +231,7 @@
   function WatchLaterPage() {
     const [scenes, setScenes] = React.useState(null);
     const [error, setError] = React.useState(null);
+    const [autoRemoved, setAutoRemoved] = React.useState(0);
 
     // "updated_at" is used as a stand-in for "date added to Watch Later": Stash doesn't keep a
     // per-tag timestamp, but tagging a scene bumps its updated_at - so the most recently added
@@ -245,7 +247,7 @@
             ) {
               count
               scenes {
-                id title date
+                id title date updated_at play_history
                 studio { name }
                 files { basename duration }
                 paths { screenshot }
@@ -256,7 +258,27 @@
           }`,
           { id: tid }
         );
-        setScenes(d.findScenes.scenes);
+        const fetched = d.findScenes.scenes;
+
+        // Auto-remove scenes watched since they were added to Watch Later: "updated_at" is our
+        // only proxy for "when added" (Stash has no per-tag timestamp - see the comment below),
+        // so a scene counts as watched-since-add if any play_history entry is newer than it.
+        // Fires the removal in the background; the UI already reflects the filtered list.
+        const stillPending = [];
+        const toAutoRemove = [];
+        for (const s of fetched) {
+          const watchedSinceAdd = (s.play_history || []).some(
+            (t) => new Date(t) > new Date(s.updated_at)
+          );
+          (watchedSinceAdd ? toAutoRemove : stillPending).push(s);
+        }
+        setScenes(stillPending);
+        setAutoRemoved(toAutoRemove.length);
+        for (const s of toAutoRemove) {
+          removeFromWatchLater(s).catch((err) =>
+            console.error("[Watch Later] auto-remove error:", err)
+          );
+        }
       } catch (err) {
         console.error("[Watch Later] load error:", err);
         setError(String(err));
@@ -270,6 +292,42 @@
     function onRemoved(id) {
       setScenes((prev) => (prev || []).filter((s) => s.id !== id));
     }
+
+    function exportList() {
+      const rows = (scenes || []).map((s) => ({
+        title: s.title || (s.files && s.files[0] && s.files[0].basename) || "",
+        studio: (s.studio && s.studio.name) || "",
+        performers: (s.performers || []).map((p) => p.name).join(", "),
+        date: s.date || "",
+        duration_seconds: (s.files && s.files[0] && s.files[0].duration) || null,
+        url: `${location.origin}/scenes/${s.id}`,
+      }));
+      const blob = new Blob([JSON.stringify(rows, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "watch-later.json";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    const exportLink = React.createElement(
+      "a",
+      {
+        className: "watchlater-kofi-link",
+        href: "#",
+        title: "Export this list as JSON",
+        onClick: (e) => {
+          e.preventDefault();
+          exportList();
+        },
+      },
+      "⬇ Export"
+    );
 
     const kofiLink = React.createElement(
       "a",
@@ -298,6 +356,7 @@
     const pageLinks = React.createElement(
       "div",
       { className: "watchlater-page-links" },
+      exportLink,
       feedbackLink,
       kofiLink
     );
@@ -329,6 +388,13 @@
         React.createElement("h3", null, `Watch Later (${scenes.length})`),
         pageLinks
       ),
+      autoRemoved > 0
+        ? React.createElement(
+            "p",
+            { className: "watchlater-auto-removed-note" },
+            `${autoRemoved} scene${autoRemoved === 1 ? "" : "s"} auto-removed: already watched since being added.`
+          )
+        : null,
       scenes.length === 0
         ? React.createElement(
             "p",
