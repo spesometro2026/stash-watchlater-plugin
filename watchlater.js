@@ -287,16 +287,20 @@
       ),
       lists && lists.length > 1
         ? React.createElement(
-            "select",
-            {
-              className: "watchlater-move-select",
-              value: activeListId,
-              onChange: moveTo,
-              disabled: moving,
-              title: "Move to another list",
-            },
-            lists.map((l) =>
-              React.createElement("option", { key: l.id, value: l.id }, l.name)
+            "div",
+            { className: "watchlater-move-select-wrap", title: "Move to another list" },
+            "➜",
+            React.createElement(
+              "select",
+              {
+                className: "watchlater-move-select",
+                value: activeListId,
+                onChange: moveTo,
+                disabled: moving,
+              },
+              lists.map((l) =>
+                React.createElement("option", { key: l.id, value: l.id }, l.name)
+              )
             )
           )
         : null,
@@ -481,14 +485,17 @@
         ? React.createElement(
             "div",
             { className: "watchlater-list-selector" },
-            React.createElement(
-              "select",
-              {
-                value: activeListId || "",
-                onChange: (e) => setActiveListId(e.target.value),
-              },
-              lists.map((l) =>
-                React.createElement("option", { key: l.id, value: l.id }, l.name)
+            lists.map((l) =>
+              React.createElement(
+                "button",
+                {
+                  key: l.id,
+                  className:
+                    "minimal watchlater-list-tab" +
+                    (l.id === activeListId ? " watchlater-list-tab-active" : ""),
+                  onClick: () => setActiveListId(l.id),
+                },
+                l.name
               )
             ),
             React.createElement(
