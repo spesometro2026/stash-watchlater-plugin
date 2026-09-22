@@ -3,6 +3,6 @@
   metadata:
     description: Adds a quick bookmark button on scene cards to add/remove a "Watch Later" tag, plus a dedicated page to browse your queue.
   version: 1.0.0
-  date: "2026-09-22"
+  date: "2026-09-22 23:00:00"
   path: watchlater.zip
   sha256: e8c7b40f313be75f5e88f6535c1caacf8044b626285c076e8fc793328432954f
