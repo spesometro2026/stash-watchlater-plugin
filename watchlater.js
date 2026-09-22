@@ -2,7 +2,7 @@
   "use strict";
   const api = window.PluginApi;
   const { React, patch, libraries, register } = api;
-  const { faBookmark, faTrash } = libraries.FontAwesomeSolid;
+  const { faTrash } = libraries.FontAwesomeSolid;
   const { Icon } = api.components;
   // Use Link (not a plain <a href>): a plain <a> triggers a full page load, which hits the
   // server and 404s on /plugin/watchlater (the route only exists client-side, not server-side) -
@@ -116,7 +116,7 @@
           onClick: toggle,
           disabled: busy,
         },
-        React.createElement(Icon, { icon: faBookmark })
+        "🔖"
       )
     );
   }
@@ -348,7 +348,7 @@
             React.createElement(
               "button",
               { className: "minimal d-flex align-items-center h-100" },
-              React.createElement(Icon, { icon: faBookmark })
+              "🔖"
             )
           )
         ),

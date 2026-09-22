@@ -7,16 +7,20 @@
 .watch-later-btn {
   background: rgba(0, 0, 0, 0.55) !important;
   border: none !important;
-  color: rgba(255, 255, 255, 0.75) !important;
   border-radius: 4px;
   padding: 0.2rem 0.4rem !important;
   line-height: 1;
+  /* the icon is an emoji, not a vector glyph: "color" doesn't tint it, only "filter" does */
+  filter: grayscale(1) brightness(1.5);
 }
 .watch-later-btn:hover {
-  color: #fff !important;
+  filter: grayscale(1) brightness(2);
 }
 .watch-later-btn.watch-later-on {
-  color: #f5c518 !important;
+  filter: none;
+}
+.watch-later-btn.watch-later-on:hover {
+  filter: brightness(1.2);
 }
 
 .watchlater-nav-link {
