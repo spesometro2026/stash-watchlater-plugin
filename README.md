@@ -6,6 +6,10 @@ A small [Stash](https://github.com/stashapp/stash) plugin that adds a **Watch La
 - A dedicated **Watch Later** page (linked from the top nav bar) lists everything you've queued, most recently added first.
 - Works by tagging scenes with a `Watch Later` tag (created automatically on first use) — no separate database, no extra state to keep in sync. Remove the tag from a scene anywhere in Stash and it drops out of the queue too.
 
+![Preview: bookmark button on scene cards and the dedicated Watch Later page](demo/preview.png)
+
+*Illustrative mockup with placeholder data — not a screenshot of a real library.*
+
 ## Install
 
 1. In Stash, go to **Settings → Plugins → Add Source**.
