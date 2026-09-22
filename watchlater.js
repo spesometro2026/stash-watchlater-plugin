@@ -2,8 +2,6 @@
   "use strict";
   const api = window.PluginApi;
   const { React, patch, libraries, register } = api;
-  const { faTrash } = libraries.FontAwesomeSolid;
-  const { Icon } = api.components;
   // Use Link (not a plain <a href>): a plain <a> triggers a full page load, which hits the
   // server and 404s on /plugin/watchlater (the route only exists client-side, not server-side) -
   // real bug found and fixed by testing live in the browser.
@@ -312,7 +310,7 @@
           onClick: remove,
           disabled: removing,
         },
-        React.createElement(Icon, { icon: faTrash })
+        "✕"
       )
     );
   }
