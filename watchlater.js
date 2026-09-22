@@ -11,6 +11,7 @@
 
   const TAG_NAME = "Watch Later";
   const KOFI_URL = "https://ko-fi.com/greenthumb80";
+  const FEEDBACK_URL = "https://github.com/spesometro2026/stash-watchlater-plugin/issues/new";
   let tagId = null;
   let tagPromise = null;
 
@@ -282,6 +283,25 @@
       "☕ Buy me a coffee"
     );
 
+    const feedbackLink = React.createElement(
+      "a",
+      {
+        className: "watchlater-kofi-link",
+        href: FEEDBACK_URL,
+        target: "_blank",
+        rel: "noopener noreferrer",
+        title: "Suggest a feature or report a bug",
+      },
+      "💡 Suggest a feature"
+    );
+
+    const pageLinks = React.createElement(
+      "div",
+      { className: "watchlater-page-links" },
+      feedbackLink,
+      kofiLink
+    );
+
     if (error) {
       return React.createElement(
         "div",
@@ -307,7 +327,7 @@
         "div",
         { className: "watchlater-page-header" },
         React.createElement("h3", null, `Watch Later (${scenes.length})`),
-        kofiLink
+        pageLinks
       ),
       scenes.length === 0
         ? React.createElement(

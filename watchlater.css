@@ -41,6 +41,13 @@
   flex-wrap: wrap;
 }
 
+.watchlater-page-links {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 .watchlater-kofi-link {
   font-size: 0.85rem;
   opacity: 0.8;

@@ -24,6 +24,10 @@ Or manually: copy `watchlater.yml`, `watchlater.js` and `watchlater.css` into yo
 - Pure client-side UI plugin — no Python, no server-side hooks, nothing to configure.
 - The "Watch Later" tag is a normal Stash tag: you can browse, filter or sort by it like any other tag outside the plugin too.
 
+## Feedback
+
+Feature ideas or bugs: [open an issue](https://github.com/spesometro2026/stash-watchlater-plugin/issues/new). Also reachable from the Watch Later page in Stash itself.
+
 ## Support
 
 If this is useful to you: [☕ ko-fi.com/greenthumb80](https://ko-fi.com/greenthumb80)
