@@ -310,7 +310,7 @@
           onClick: remove,
           disabled: removing,
         },
-        "✕"
+        "🔖"
       )
     );
   }
