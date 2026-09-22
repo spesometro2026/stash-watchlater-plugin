@@ -350,6 +350,21 @@
               { className: "minimal d-flex align-items-center h-100" },
               "🔖"
             )
+          ),
+          React.createElement(
+            "a",
+            {
+              className: "nav-utility watchlater-kofi-nav-link",
+              href: KOFI_URL,
+              target: "_blank",
+              rel: "noopener noreferrer",
+              title: "Buy me a coffee",
+            },
+            React.createElement(
+              "button",
+              { className: "minimal d-flex align-items-center h-100" },
+              "☕"
+            )
           )
         ),
       },

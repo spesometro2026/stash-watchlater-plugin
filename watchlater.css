@@ -28,6 +28,17 @@
   text-decoration: none;
 }
 
+.watchlater-kofi-nav-link {
+  color: inherit;
+  text-decoration: none;
+  filter: grayscale(1) brightness(1.5);
+  opacity: 0.8;
+}
+.watchlater-kofi-nav-link:hover {
+  filter: none;
+  opacity: 1;
+}
+
 .watchlater-page {
   padding: 1rem 1.5rem;
 }
