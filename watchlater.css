@@ -23,6 +23,34 @@
   filter: brightness(1.2);
 }
 
+/* single scene page: toolbar button (next to rating / counters / operations menu) */
+.watchlater-scene-btn {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 0.4rem !important;
+  line-height: 1;
+  filter: grayscale(1) brightness(1.4);
+}
+.watchlater-scene-btn:hover {
+  filter: grayscale(1) brightness(2);
+}
+.watchlater-scene-btn.watch-later-on {
+  filter: none;
+}
+.watchlater-scene-btn.watch-later-on:hover {
+  filter: brightness(1.2);
+}
+/* fallback when the toolbar isn't found: floating button under the navbar */
+.watchlater-scene-floating {
+  position: fixed;
+  top: 4.5rem;
+  right: 1rem;
+  z-index: 1030;
+  background: rgba(0, 0, 0, 0.55) !important;
+  border-radius: 4px;
+  padding: 0.3rem 0.5rem !important;
+}
+
 .watchlater-nav-link {
   color: inherit;
   text-decoration: none;

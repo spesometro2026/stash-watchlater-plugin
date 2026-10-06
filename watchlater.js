@@ -75,7 +75,36 @@
     };
   }
 
+  // One lookup per page load, shared by every button (cards and the scene page) - not one per card.
+  let familyPromise = null;
+  function ensureFamily() {
+    if (!familyPromise) familyPromise = ensureLists();
+    return familyPromise;
+  }
+
+  // A scene is "queued" if it carries the root tag or any list tag (child of the root).
+  function isQueued(tags) {
+    return (tags || []).some((t) => familyIds.has(t.id));
+  }
+
+  // Queue / unqueue in one mutation. Adding puts the scene on the root list ("All"); removing drops every
+  // Watch Later family tag it carries (root and any list), leaving unrelated tags untouched.
+  // Returns the scene's fresh tag list, so callers don't keep working from a stale copy.
+  async function setQueued(sceneId, currentTags, queue) {
+    const { rootId } = await ensureFamily();
+    const currentIds = (currentTags || []).map((t) => t.id);
+    const newIds = queue
+      ? Array.from(new Set([...currentIds, rootId]))
+      : currentIds.filter((x) => !familyIds.has(x));
+    const out = await gql(
+      "mutation($input: SceneUpdateInput!) { sceneUpdate(input: $input) { id tags { id name } } }",
+      { input: { id: sceneId, tag_ids: newIds } }
+    );
+    return out.sceneUpdate.tags;
+  }
+
   async function createList(name) {
+    familyPromise = null; // the family changes: refetch next time
     const rootId = await ensureTag();
     const created = await gql(
       "mutation($input: TagCreateInput!) { tagCreate(input: $input) { id } }",
@@ -111,47 +140,38 @@
     );
   }
 
-  // ------------------------------------------------------------------ card button (grid)
-  function WatchLaterButton({ scene }) {
-    // "on" is real React state (not re-derived from scene.tags on every render): mutating
-    // scene.tags in place, like the previous version did, does NOT trigger a re-render on its
-    // own - that's the root cause of the old "needs a reload to see the change" bug. Now it's
-    // flipped explicitly with setOn once the mutation succeeds.
-    const [on, setOn] = React.useState(
-      !!(tagId && (scene.tags || []).some((t) => t.id === tagId))
-    );
+  // ------------------------------------------------------------------ shared queue state
+  // "on" is real React state (not re-derived from scene.tags on every render): mutating scene.tags in place does
+  // NOT trigger a re-render, which was the root cause of an old "needs a reload to see the change" bug. It is
+  // flipped explicitly once the click is applied (optimistically), and re-synced when the scene's tags change.
+  function useQueued(scene) {
+    const [on, setOn] = React.useState(() => isQueued(scene.tags));
     const [busy, setBusy] = React.useState(false);
+    const tagsRef = React.useRef(scene.tags || []);
 
     React.useEffect(() => {
+      tagsRef.current = scene.tags || [];
       let alive = true;
-      ensureTag().then((tid) => {
-        if (alive) setOn((scene.tags || []).some((t) => t.id === tid));
+      ensureFamily().then(() => {
+        if (alive) setOn(isQueued(tagsRef.current));
       });
       return () => {
         alive = false;
       };
-    }, []);
+    }, [scene.id, scene.tags]);
 
     async function toggle(e) {
-      e.preventDefault();
-      e.stopPropagation();
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
       if (busy) return;
       const prevOn = on;
-      const nextOn = !on;
-      // Optimistic: flip the color immediately, don't make the click feel dead while the
-      // GraphQL round-trip is in flight. Roll back on failure.
-      setOn(nextOn);
+      setOn(!prevOn); // optimistic: don't make the click feel dead while the GraphQL round-trip runs
       setBusy(true);
       try {
-        const tid = await ensureTag();
-        const currentIds = (scene.tags || []).map((t) => t.id);
-        const newIds = nextOn
-          ? [...currentIds, tid]
-          : currentIds.filter((x) => x !== tid);
-        await gql(
-          "mutation($input: SceneUpdateInput!) { sceneUpdate(input: $input) { id tags { id } } }",
-          { input: { id: scene.id, tag_ids: newIds } }
-        );
+        tagsRef.current = await setQueued(scene.id, tagsRef.current, !prevOn);
+        setOn(isQueued(tagsRef.current));
       } catch (err) {
         console.error("[Watch Later] toggle error:", err);
         setOn(prevOn);
@@ -159,15 +179,19 @@
         setBusy(false);
       }
     }
+    return { on, busy, toggle };
+  }
 
+  // ------------------------------------------------------------------ card button (grid)
+  function WatchLaterButton({ scene }) {
+    const { on, busy, toggle } = useQueued(scene);
     return React.createElement(
       "div",
       { className: "watch-later-overlay" },
       React.createElement(
         "button",
         {
-          className:
-            "watch-later-btn minimal" + (on ? " watch-later-on" : ""),
+          className: "watch-later-btn minimal" + (on ? " watch-later-on" : ""),
           title: on ? "Remove from Watch Later" : "Add to Watch Later",
           onClick: toggle,
           disabled: busy,
@@ -184,6 +208,78 @@
       orig(props, _ctx),
       React.createElement(WatchLaterButton, { scene: props.scene })
     );
+  });
+
+  // ------------------------------------------------------------------ single scene page
+  // Same bookmark on the scene's own page, in the toolbar next to rating / counters / operations menu.
+  function SceneWatchLaterButton({ scene, floating }) {
+    const { on, busy, toggle } = useQueued(scene);
+    return React.createElement(
+      "button",
+      {
+        className:
+          "watchlater-scene-btn btn btn-secondary minimal" +
+          (on ? " watch-later-on" : "") +
+          (floating ? " watchlater-scene-floating" : ""),
+        title: on ? "Remove from Watch Later" : "Add to Watch Later",
+        onClick: toggle,
+        disabled: busy,
+      },
+      "🔖"
+    );
+  }
+
+  // Walks the element tree ScenePage returned and appends `make()` to the LAST ".scene-toolbar-group" (the one with
+  // the counters and the operations menu). Elements are immutable, so the path to it is cloned. Returns
+  // { node, done }: done=false means the toolbar wasn't found (Stash changed the page) and the caller falls back.
+  function injectIntoToolbar(node, make) {
+    if (!React.isValidElement(node)) return { node, done: false };
+    const props = node.props || {};
+    const children = props.children;
+    let found = null;
+    let newChildren = children;
+    if (children != null) {
+      const list = React.Children.toArray(children);
+      for (let i = list.length - 1; i >= 0; i--) {
+        const r = injectIntoToolbar(list[i], make);
+        if (r.done) {
+          list[i] = r.node;
+          found = true;
+          break;
+        }
+      }
+      if (found) return { node: React.cloneElement(node, undefined, ...list), done: true };
+    }
+    if (typeof props.className === "string" && /(^|\s)scene-toolbar-group(\s|$)/.test(props.className)) {
+      const list = React.Children.toArray(children);
+      return { node: React.cloneElement(node, undefined, ...list, make()), done: true };
+    }
+    return { node, done: false };
+  }
+
+  patch.after("ScenePage", function (props, _ctx, result) {
+    try {
+      const scene = props && props.scene;
+      if (!scene) return result;
+      const out = injectIntoToolbar(result, () =>
+        React.createElement(
+          "span",
+          { key: "watchlater-scene", className: "watchlater-scene-toolbar-item" },
+          React.createElement(SceneWatchLaterButton, { scene })
+        )
+      );
+      if (out.done) return out.node;
+      // toolbar not found: keep working with a floating button instead of silently doing nothing
+      return React.createElement(
+        React.Fragment,
+        null,
+        result,
+        React.createElement(SceneWatchLaterButton, { scene, floating: true })
+      );
+    } catch (err) {
+      console.error("[Watch Later] scene page patch error:", err);
+      return result;
+    }
   });
 
   // ------------------------------------------------------------------ dedicated page

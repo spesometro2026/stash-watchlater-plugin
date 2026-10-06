@@ -3,6 +3,7 @@
 A small [Stash](https://github.com/stashapp/stash) plugin that adds a **Watch Later** queue.
 
 - A bookmark button appears on every scene card — click it to add/remove the scene from your queue.
+- The same bookmark is in the toolbar of a scene's own page (next to rating, counters and the operations menu), so you can queue the video you're looking at without going back to the list. A scene on any of your lists counts as queued; removing it takes it off every list.
 - A dedicated **Watch Later** page (linked from the top nav bar) lists everything you've queued, most recently added first.
 - Works by tagging scenes with a `Watch Later` tag (created automatically on first use) — no separate database, no extra state to keep in sync. Remove the tag from a scene anywhere in Stash and it drops out of the queue too.
 - **Multiple lists**: create extra lists (child tags of `Watch Later`) and move scenes between them from the dedicated page.
